@@ -1,0 +1,6 @@
+{
+  "name": "security-auditor",
+  "version": "1.0.0",
+  "description": "Security & compliance auditor for Claude Code. Scans for HIPAA, GDPR, PCI DSS, PIPEDA, CCPA, and SOC 2 violations including PII in logs, hardcoded secrets, and input validation issues.",
+  "author": { "name": "Sofiane Toumert" }
+}

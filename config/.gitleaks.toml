@@ -1,0 +1,179 @@
+title = "Security Auditor Plugin - Gitleaks Configuration"
+
+# Gitleaks configuration for detecting secrets in commits
+# Documentation: https://github.com/gitleaks/gitleaks
+
+[extend]
+# Use default gitleaks rules
+useDefault = true
+
+[allowlist]
+description = "Allowlist for false positives"
+
+# Paths to ignore (directories, files, and patterns)
+paths = [
+  '''node_modules/''',
+  '''pnpm-lock.yaml''',
+  '''package-lock.json''',
+  '''yarn.lock''',
+  '''.pnpm-store/''',
+  '''dist/''',
+  '''build/''',
+  '''.next/''',
+  '''.expo/''',
+  '''.turbo/''',
+  '''__tests__/''',
+  '''__mocks__/''',
+  '''.*\.test\.ts$''',
+  '''.*\.test\.tsx$''',
+  '''.*\.spec\.ts$''',
+  '''.*\.spec\.tsx$''',
+  '''.*\.test\.js$''',
+  '''.*\.spec\.js$''',
+  # Documentation files (contain example "bad code" for educational purposes)
+  '''docs/.*\.md$''',
+  '''.*SECURITY_GUIDELINES\.md''',
+  '''\.claude/skills/.*\.md$''',
+  '''\.claude/agents/.*\.md$''',
+]
+
+# Regexes to ignore - explicit placeholder patterns for documentation examples
+# These patterns match common placeholder formats used in example code
+regexes = [
+  # Domain placeholders
+  '''example\.com''',
+  '''example\.org''',
+  '''localhost''',
+  # Explicit placeholder tokens
+  '''your-api-key-here''',
+  '''your-secret-here''',
+  '''REPLACE_ME''',
+  '''TODO:''',
+  # Common placeholder patterns in documentation
+  '''YOUR_[A-Z_]+_HERE''',
+  '''<your-[a-z-]+-here>''',
+  '''EXAMPLE_[A-Z_]+''',
+  '''INSERT_[A-Z_]+_HERE''',
+  # Masked/redacted patterns shown in documentation
+  '''sk-ant-api\*+''',
+  '''sk_live_\*+''',
+  '''sk_test_\*+''',
+  '''\[REDACTED[^\]]*\]''',
+  '''<email>''',
+  '''<phone>''',
+  '''<ssn>''',
+  '''<ip>''',
+  # Test data patterns
+  '''test[@_]example''',
+  '''fake[@_]''',
+  '''dummy[@_]''',
+]
+
+# Additional custom rules
+[[rules]]
+id = "generic-api-key"
+description = "Generic API Key Pattern"
+regex = '''(?i)(api[_-]?key|apikey|api[_-]?secret)['":\s]*[=:]\s*['"][0-9a-zA-Z]{16,}['"]'''
+tags = ["key", "API"]
+
+[[rules]]
+id = "jwt-token"
+description = "JWT Token"
+regex = '''eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+tags = ["key", "JWT"]
+
+[[rules]]
+id = "private-key"
+description = "Private Key"
+regex = '''-----BEGIN (RSA|DSA|EC|PGP|OPENSSH) PRIVATE KEY-----'''
+tags = ["key", "private"]
+
+[[rules]]
+id = "slack-token"
+description = "Slack Token"
+regex = '''xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[0-9a-zA-Z]{24,32}'''
+tags = ["key", "Slack"]
+
+[[rules]]
+id = "github-token"
+description = "GitHub Token"
+regex = '''gh[pousr]_[0-9a-zA-Z]{36,}'''
+tags = ["key", "GitHub"]
+
+[[rules]]
+id = "aws-access-key"
+description = "AWS Access Key"
+regex = '''(A3T[A-Z0-9]|AKIA|AGPA|AIDA|AROA|AIPA|ANPA|ANVA|ASIA)[A-Z0-9]{16}'''
+tags = ["key", "AWS"]
+
+[[rules]]
+id = "gcp-api-key"
+description = "Google Cloud Platform API Key"
+regex = '''AIza[0-9A-Za-z\\-_]{35}'''
+tags = ["key", "GCP"]
+
+[[rules]]
+id = "stripe-live-key"
+description = "Stripe API Key"
+regex = '''sk_live_[0-9a-zA-Z]{24,34}'''
+tags = ["key", "Stripe"]
+
+[[rules]]
+id = "stripe-test-key"
+description = "Stripe Test API Key"
+regex = '''sk_test_[0-9a-zA-Z]{24,34}'''
+tags = ["key", "Stripe"]
+
+[[rules]]
+id = "mailgun-key"
+description = "Mailgun API Key"
+regex = '''key-[0-9a-zA-Z]{32}'''
+tags = ["key", "Mailgun"]
+
+[[rules]]
+id = "twilio-key"
+description = "Twilio API Key"
+regex = '''SK[0-9a-f]{32}'''
+tags = ["key", "Twilio"]
+
+[[rules]]
+id = "sendgrid-key"
+description = "SendGrid API Key"
+regex = '''SG\.[0-9A-Za-z\-_]{22}\.[0-9A-Za-z\-_]{43}'''
+tags = ["key", "SendGrid"]
+
+[[rules]]
+id = "mongodb-connection"
+description = "MongoDB Connection String with Credentials"
+regex = '''mongodb(\+srv)?://[a-zA-Z0-9]+:[a-zA-Z0-9]+@'''
+tags = ["key", "MongoDB"]
+
+[[rules]]
+id = "postgres-connection"
+description = "PostgreSQL Connection String with Password"
+regex = '''postgres://[a-zA-Z0-9]+:[a-zA-Z0-9]+@'''
+tags = ["key", "PostgreSQL"]
+
+[[rules]]
+id = "generic-password"
+description = "Generic Password in Config"
+regex = '''(?i)(password|passwd|pwd)['":\s]*[=:]\s*['"][^'"\s]{8,}['"]'''
+tags = ["password"]
+
+[[rules]]
+id = "bearer-token"
+description = "Bearer Token"
+regex = '''(?i)bearer\s+[a-zA-Z0-9\-._~+/]+=*'''
+tags = ["key", "Bearer"]
+
+[[rules]]
+id = "anthropic-api-key"
+description = "Anthropic API Key"
+regex = '''sk-ant-api[0-9]{2}-[A-Za-z0-9_-]{20,}'''
+tags = ["key", "Anthropic"]
+
+[[rules]]
+id = "generic-env-api-key"
+description = "API Key in Environment Variable"
+regex = '''(?i)(API[_-]?KEY|API[_-]?SECRET|SECRET[_-]?KEY)\s*[=:]\s*['"]?[A-Za-z0-9_-]{20,}['"]?'''
+tags = ["key", "Generic"]
