@@ -1,21 +1,23 @@
 ---
 name: security-review
-description: Validate security checklist before PR. Use when reviewing security posture.
+description: Full codebase security checklist. Use for comprehensive security audits.
 ---
 
 # Security Review Skill
 
 ## Purpose
 
-Run a manual security checklist against code changes to ensure compliance with security best practices before PR creation.
+Run the full 8-item security checklist against the **entire codebase** (or a specified directory) to ensure compliance with security best practices. This is a comprehensive scan — it checks all files, not just changed ones.
+
+For scanning only changed files (e.g., before a PR), use `/security-review-diff` instead.
 
 ## When to Use
 
-- Before committing feature that handles PII/PHI
-- Before PR creation (supplement to automated Claude PR review)
+- Comprehensive security audit of the full codebase
 - After implementing authentication/authorization changes
-- Manual security audit
-- As final check before deployment
+- Monthly or quarterly security reviews
+- Before major releases or deployments
+- Initial security assessment of a new project
 
 ## Usage
 
@@ -23,13 +25,15 @@ Run a manual security checklist against code changes to ensure compliance with s
 /security-review [path]
 ```
 
+**Scope:** Scans ALL files in the target path. Defaults to the entire codebase.
+
 Examples:
 
 ```
-/security-review                          # Check entire codebase
-/security-review src/                     # Check specific directory
-/security-review src/features/auth/       # Check authentication feature
-/security-review src/features/payments/   # Check payment processing
+/security-review                          # Scan entire codebase
+/security-review src/                     # Scan all source files
+/security-review src/features/auth/       # Scan authentication feature
+/security-review src/features/payments/   # Scan payment processing
 ```
 
 ## Security Checklist
@@ -513,6 +517,7 @@ Review before implementing security-sensitive features:
 
 ## Related Skills
 
+- `/security-review-diff` - Same checklist, but only on changed files (git diff)
 - `/pii-scanner` - Detailed PII detection
 - `/secrets-check` - Enhanced secret detection
 - `/compliance-check` - Full HIPAA/GDPR/PCI DSS validation

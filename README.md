@@ -8,11 +8,14 @@ A comprehensive security and compliance auditor plugin for Claude Code. Scans co
 
 - **`security-auditor`** - Orchestrator agent that runs all security skills and generates a comprehensive report
 
-### 5 Skills
+> `/security-review` scans the **full codebase**. `/security-review-diff` scans **only changed files** (git diff) for fast pre-PR checks.
+
+### 6 Skills
 
 | Skill | Command | Description |
 | --- | --- | --- |
-| Security Review | `/security-review` | 8-item security checklist (input validation, PII, secrets, HTTPS, headers, tokens, encryption, errors) |
+| Security Review | `/security-review` | Full codebase 8-item security checklist (input validation, PII, secrets, HTTPS, headers, tokens, encryption, errors) |
+| Security Review Diff | `/security-review-diff` | Same 8-item checklist, but only on changed files (git diff) — ideal for PRs |
 | Secrets Check | `/secrets-check` | Gitleaks + custom patterns for 14+ secret types |
 | PII Scanner | `/pii-scanner` | Detects PII in logs, errors, and console output |
 | Compliance Check | `/compliance-check` | Full HIPAA/GDPR/PCI DSS/PIPEDA/CCPA/SOC 2 validation |
@@ -64,8 +67,11 @@ This triggers the orchestrator agent which runs all skills and produces a compre
 ### Run individual skills
 
 ```bash
-# Full security checklist
+# Full codebase security checklist (all files)
 /security-review [path]
+
+# Security checklist on changed files only (git diff)
+/security-review-diff [base-branch]
 
 # Scan for hardcoded secrets
 /secrets-check [path]

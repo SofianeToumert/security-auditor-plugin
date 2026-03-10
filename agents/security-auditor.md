@@ -7,7 +7,7 @@ description: |
   (2) "Check compliance" - validates standards
 model: opus
 color: red
-skills: security-review, secrets-check, pii-scanner, compliance-check, generate-compliance-report
+skills: security-review, security-review-diff, secrets-check, pii-scanner, compliance-check, generate-compliance-report
 ---
 
 # security-auditor - Security & Compliance Auditor
@@ -46,9 +46,10 @@ Prevent security violations and compliance breaches by scanning for HIPAA, GDPR,
 
 ## Skills & Commands Used
 
+- `/security-review` - Full codebase security checklist (8 items)
+- `/security-review-diff` - Same checklist, only on changed files (git diff)
 - `/pii-scanner` - Detect PII in logs
 - `/secrets-check` - Find hardcoded credentials
-- `/security-review` - Validate security checklist
 - `/compliance-check` - Full compliance validation
 - `/generate-compliance-report` - Generate stakeholder compliance reports
 
