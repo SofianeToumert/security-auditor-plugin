@@ -1,13 +1,16 @@
 {
-  "name": "security-auditor-marketplace",
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "security-auditor-plugin",
   "version": "1.0.0",
-  "description": "Security & compliance auditing plugins for Claude Code",
+  "description": "Security & compliance auditing plugins for Claude Code. Scans for HIPAA, GDPR, PCI DSS, PIPEDA, CCPA, and SOC 2 violations.",
   "owner": { "name": "Sofiane Toumert" },
   "plugins": [
     {
       "name": "security-auditor",
       "description": "Security & compliance auditor with HIPAA/GDPR/PCI DSS/PIPEDA/CCPA/SOC 2 scanning",
-      "source": ".",
+      "version": "1.0.0",
+      "author": { "name": "Sofiane Toumert" },
+      "source": "./",
       "category": "security"
     }
   ]
