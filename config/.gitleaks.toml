@@ -34,7 +34,6 @@ paths = [
   '''docs/.*\.md$''',
   '''.*SECURITY_GUIDELINES\.md''',
   '''\.claude/skills/.*\.md$''',
-  '''\.claude/agents/.*\.md$''',
 ]
 
 # Regexes to ignore - explicit placeholder patterns for documentation examples

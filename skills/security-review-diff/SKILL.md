@@ -5,6 +5,68 @@ description: Security checklist on changed files only (git diff). Use before PRs
 
 # Security Review Diff Skill
 
+## Security Auditor Role
+
+You are the **security-auditor** — a security and compliance auditor that prevents security violations and compliance breaches.
+
+### Operating Mode
+
+- **CRITICAL** violations block merge. Must be fixed before PR approval.
+- **WARNING** findings are advisory. Should be fixed but do not block.
+
+### Compliance Quick Reference
+
+| Framework | Focus | Key Rules | Max Penalty |
+|-----------|-------|-----------|-------------|
+| HIPAA | Healthcare PHI | PHI encryption, audit logs, no PII in logs, 24hr breach notification | $50,000/violation |
+| GDPR | EU personal data | Consent, right to access/delete, data minimization, 72hr breach notification | 4% annual revenue |
+| PCI DSS 4.0 | Payment cards | 12-char passwords, MFA, 15min timeout, no card storage, HTTPS only | $500,000/month |
+| PIPEDA | Canadian data | Consent, purpose limitation, safeguards, openness | CA$100,000 |
+| CCPA | California data | Right to know, delete, opt-out of sale | $7,500/violation |
+| SOC 2 | Security controls | No hardcoded secrets, access control logging, change management, incident response | Audit failure |
+
+### Incident Response
+
+If a CRITICAL violation is found:
+
+1. **Block** the commit/merge immediately
+2. **Alert** the developer with the specific fix required
+3. **Assess** impact if already in production (data leak? credential exposure?)
+4. **Notify** per breach timelines — GDPR: 72 hours, HIPAA: 60 days
+
+### PII Detection Patterns
+
+| PII Type | Regex Pattern |
+|----------|--------------|
+| Email | `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}` |
+| Phone | `\(\d{3}\) \d{3}-\d{4}`, `\d{3}-\d{3}-\d{4}`, `\d{10}` |
+| SSN | `\d{3}-\d{2}-\d{4}` |
+| IP Address | `\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}` |
+
+### Secret Detection Patterns
+
+| Secret Type | Regex Pattern |
+|-------------|--------------|
+| Stripe API keys | `sk_live_[a-zA-Z0-9]+`, `pk_live_[a-zA-Z0-9]+` |
+| AWS Access Key | `AKIA[0-9A-Z]{16}` |
+| Bearer Token | `Bearer [a-zA-Z0-9._-]+` |
+| Password assignment | `password\s*=\s*["'][^"']+["']` |
+
+### Data Masking Patterns
+
+When PII must be logged, use masking:
+
+```typescript
+// Email: j***@example.com
+const maskEmail = (email: string) => email.charAt(0) + '***@' + email.split('@')[1];
+
+// Phone: ***-***-4567
+const maskPhone = (phone: string) => '***-***-' + phone.slice(-4);
+
+// IP: 192.168.1.xxx
+const maskIP = (ip: string) => ip.split('.').slice(0, 3).join('.') + '.xxx';
+```
+
 ## Purpose
 
 Run the 8-item security checklist against **only changed files** (staged, unstaged, or compared to a base branch). This is the fast, targeted version of `/security-review` designed for pre-commit and pre-PR workflows.
@@ -76,110 +138,93 @@ For each changed file, the skill also considers:
 
 ## Output Format
 
-### Clean Result
+Use the following canonical `===` delimited report structure (diff variant):
 
-```
-🔒 Security Review (Diff): PASSED
-
-Base: main
-Changed files: 5 files scanned
-
-Files reviewed:
-  src/features/auth/login.ts        (modified)
-  src/features/auth/register.ts     (modified)
-  src/lib/api-client.ts             (modified)
-  src/components/LoginForm.tsx       (modified)
-  src/hooks/useAuth.ts              (new)
-
-✅ Input validation: Zod schemas found in new handlers
-✅ No PII in logs: No PII detected in changes
-✅ Secrets: No hardcoded secrets in diff
-✅ HTTPS: All new URLs use HTTPS
-✅ Security headers: No changes to headers
-✅ Token storage: Using httpOnly cookies
-✅ Data encryption: HTTPS enforced for new API calls
-✅ Error messages: Generic messages in new error handlers
-
-All security checks passed for changed files. ✅
-
-Compliance: HIPAA ✓ GDPR ✓ PCI DSS ✓ PIPEDA ✓ CCPA ✓ SOC 2 ✓
-```
-
-### Violations Found
-
-```
-🔒 Security Review (Diff) Results:
-
+````
+===========================================
+SECURITY-AUDITOR: Security & Compliance Report (Diff)
+===========================================
 Base: main
 Changed files: 3 files scanned
 
 Files reviewed:
-  src/features/auth/login.ts        (modified)  ← 2 issues
-  src/lib/logger.ts                 (modified)  ← 1 issue
-  src/components/PaymentForm.tsx     (new)       ← clean
+  src/features/auth/login.ts        (modified)
+  src/lib/logger.ts                 (modified)
+  src/components/PaymentForm.tsx     (new)
 
----
+=== CRITICAL VIOLATIONS (BLOCKS MERGE) ===
+Count: 2
 
-❌ PII in logs (CHANGED LINE)
+1. src/features/auth/login.ts:42 (CHANGED LINE)
+   Violation: Email logged in new code
+   Diff: + console.log('Login attempt:', { email: user.email });
+   Standards: GDPR, HIPAA, CCPA
+   Impact: Personal data leakage in logs
+   Fix: Use user ID instead
+   Example:
+     ```typescript
+     // Bad
+     console.log('Login attempt:', { email: user.email });
 
-File: src/features/auth/login.ts:42
-Diff: + console.log('Login attempt:', { email: user.email });
+     // Good
+     logger.info('Login attempt', { userId: user.id });
+     ```
 
-Issue: Email address logged in new code
-Standards: GDPR, HIPAA, CCPA
-Severity: CRITICAL
+2. src/features/auth/login.ts:15 (CHANGED LINE)
+   Violation: Live API key hardcoded in new code
+   Diff: + const API_KEY = 'sk_live_abc123xyz';
+   Standards: SOC 2
+   Impact: Secret exposure in git history
+   Fix: Use environment variable
+   Example:
+     ```typescript
+     const API_KEY = process.env.API_KEY;
+     ```
 
-Fix:
-  logger.info('Login attempt', { userId: user.id });
+=== WARNINGS (NON-BLOCKING) ===
+Count: 1
 
----
+1. src/lib/logger.ts:30 (CHANGED LINE)
+   Warning: Raw req.body usage without zod validation
+   Diff: + function handleWebhook(req) { const data = req.body; ... }
+   Standards: Best practice
+   Suggestion: const data = WebhookSchema.parse(req.body);
 
-❌ Hardcoded secret (CHANGED LINE)
+=== COMPLIANCE STATUS ===
+✓ HIPAA (Healthcare): PASS
+✗ GDPR (Europe): FAIL (email in logs - new code)
+✓ PCI DSS (Payment): PASS
+✓ PIPEDA (Canada): PASS
+✓ CCPA (California): PASS
+✗ SOC 2 (Security): FAIL (hardcoded secret - new code)
 
-File: src/features/auth/login.ts:15
-Diff: + const API_KEY = 'sk_live_abc123xyz';
+=== PII DETECTED ===
+- src/features/auth/login.ts:42 - Email (new code)
 
-Issue: Live API key hardcoded in new code
-Standards: SOC 2
-Severity: CRITICAL
-
-Fix:
-  const API_KEY = process.env.API_KEY;
-
----
-
-⚠️  Missing input validation (CHANGED LINE)
-
-File: src/lib/logger.ts:30
-Diff: + function handleWebhook(req) { const data = req.body; ... }
-
-Issue: Raw req.body usage without zod validation
-Standards: Best practice
-Severity: WARNING
-
-Fix:
-  const data = WebhookSchema.parse(req.body);
-
----
-
-Summary:
-- Changed files scanned: 3
-- Clean files: 1
-- Files with issues: 2
-- Critical: 2 (BLOCKS MERGE)
-- Warnings: 1
-
-Compliance Impact:
-- ❌ GDPR: Violation (email in logs - new code)
-- ❌ SOC 2: Violation (hardcoded secret - new code)
-
-Recommendation:
-FIX CRITICAL ISSUES before merging:
+=== REQUIRED ACTIONS ===
+Before merge:
 1. Remove email from login log (line 42)
 2. Move API key to environment variable (line 15)
 
-For a full codebase audit, run: /security-review
-```
+Recommended (not blocking):
+3. Add zod validation for webhook handler
+
+===========================================
+SUMMARY
+===========================================
+Critical: 2 (BLOCKS MERGE)
+Warnings: 1 (should fix)
+Changed files: 3 scanned, 2 with issues
+Compliance: 4/6 passing
+
+Status: ❌ CRITICAL ISSUES - CANNOT MERGE
+(or: Status: ✅ ALL CHECKS PASSED)
+
+Next Steps:
+1. Fix critical violations
+2. Run /security-review-diff again
+3. For full codebase audit: /security-review
+````
 
 ## What's Different from /security-review
 

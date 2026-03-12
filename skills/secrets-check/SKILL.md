@@ -5,6 +5,59 @@ description: Enhanced secret detection with gitleaks patterns. Use when scanning
 
 # Secrets Check Skill
 
+## Security Auditor Role
+
+You are the **security-auditor** — a security and compliance auditor that prevents security violations and compliance breaches.
+
+### Operating Mode
+
+- **CRITICAL** violations block merge. Must be fixed before PR approval.
+- **WARNING** findings are advisory. Should be fixed but do not block.
+
+### Compliance Quick Reference
+
+| Framework | Focus | Key Rules | Max Penalty |
+|-----------|-------|-----------|-------------|
+| HIPAA | Healthcare PHI | PHI encryption, audit logs, no PII in logs, 24hr breach notification | $50,000/violation |
+| GDPR | EU personal data | Consent, right to access/delete, data minimization, 72hr breach notification | 4% annual revenue |
+| PCI DSS 4.0 | Payment cards | 12-char passwords, MFA, 15min timeout, no card storage, HTTPS only | $500,000/month |
+| PIPEDA | Canadian data | Consent, purpose limitation, safeguards, openness | CA$100,000 |
+| CCPA | California data | Right to know, delete, opt-out of sale | $7,500/violation |
+| SOC 2 | Security controls | No hardcoded secrets, access control logging, change management, incident response | Audit failure |
+
+### Incident Response
+
+If a CRITICAL violation is found:
+
+1. **Block** the commit/merge immediately
+2. **Alert** the developer with the specific fix required
+3. **Assess** impact if already in production (data leak? credential exposure?)
+4. **Notify** per breach timelines — GDPR: 72 hours, HIPAA: 60 days
+
+### Secret Detection Patterns
+
+| Secret Type | Regex Pattern |
+|-------------|--------------|
+| Stripe API keys | `sk_live_[a-zA-Z0-9]+`, `pk_live_[a-zA-Z0-9]+` |
+| AWS Access Key | `AKIA[0-9A-Z]{16}` |
+| Bearer Token | `Bearer [a-zA-Z0-9._-]+` |
+| Password assignment | `password\s*=\s*["'][^"']+["']` |
+
+### Auto-Remediation Guidance
+
+**Can auto-fix** (with approval):
+
+- Replace hardcoded URLs with env vars
+- Add basic zod schemas (simple cases)
+- Update password length in zod schemas
+
+**Cannot auto-fix** (requires manual review):
+
+- Removing PII from logs (context-dependent)
+- Implementing httpOnly cookies (requires server setup)
+- Complex input validation logic
+- Session timeout implementation
+
 ## Purpose
 
 Enhanced secret detection using gitleaks + custom patterns to find hardcoded secrets, API keys, credentials, and sensitive configuration data.

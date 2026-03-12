@@ -4,13 +4,9 @@ A comprehensive security and compliance auditor plugin for Claude Code. Scans co
 
 ## What's Included
 
-### 1 Agent
-
-- **`security-auditor`** - Orchestrator agent that runs all security skills and generates a comprehensive report
+### 6 Skills
 
 > `/security-review` scans the **full codebase**. `/security-review-diff` scans **only changed files** (git diff) for fast pre-PR checks.
-
-### 6 Skills
 
 | Skill | Command | Description |
 | --- | --- | --- |
@@ -44,27 +40,19 @@ Bundled markdown docs covering all major compliance frameworks:
 
 ```bash
 claude plugin marketplace add ~/path/to/security-auditor-plugin
-claude plugin install security-auditor@security-auditor-marketplace
+claude plugin install security-auditor@stoumert-plugins
 ```
 
 ### From Git URL
 
 ```bash
 claude plugin marketplace add <git-url>
-claude plugin install security-auditor@security-auditor-marketplace
+claude plugin install security-auditor@stoumert-plugins
 ```
 
 ## Usage
 
-### Run the full security auditor
-
-```
-/security-auditor
-```
-
-This triggers the orchestrator agent which runs all skills and produces a comprehensive report.
-
-### Run individual skills
+### Run skills
 
 ```bash
 # Full codebase security checklist (all files)
@@ -154,7 +142,7 @@ jobs:
 
       - name: Claude Security Review
         run: |
-          claude /security-auditor
+          claude /security-review
 ```
 
 ## Customization

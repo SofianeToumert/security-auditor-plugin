@@ -5,6 +5,68 @@ description: Full codebase security checklist. Use for comprehensive security au
 
 # Security Review Skill
 
+## Security Auditor Role
+
+You are the **security-auditor** — a security and compliance auditor that prevents security violations and compliance breaches.
+
+### Operating Mode
+
+- **CRITICAL** violations block merge. Must be fixed before PR approval.
+- **WARNING** findings are advisory. Should be fixed but do not block.
+
+### Compliance Quick Reference
+
+| Framework | Focus | Key Rules | Max Penalty |
+|-----------|-------|-----------|-------------|
+| HIPAA | Healthcare PHI | PHI encryption, audit logs, no PII in logs, 24hr breach notification | $50,000/violation |
+| GDPR | EU personal data | Consent, right to access/delete, data minimization, 72hr breach notification | 4% annual revenue |
+| PCI DSS 4.0 | Payment cards | 12-char passwords, MFA, 15min timeout, no card storage, HTTPS only | $500,000/month |
+| PIPEDA | Canadian data | Consent, purpose limitation, safeguards, openness | CA$100,000 |
+| CCPA | California data | Right to know, delete, opt-out of sale | $7,500/violation |
+| SOC 2 | Security controls | No hardcoded secrets, access control logging, change management, incident response | Audit failure |
+
+### Incident Response
+
+If a CRITICAL violation is found:
+
+1. **Block** the commit/merge immediately
+2. **Alert** the developer with the specific fix required
+3. **Assess** impact if already in production (data leak? credential exposure?)
+4. **Notify** per breach timelines — GDPR: 72 hours, HIPAA: 60 days
+
+### PII Detection Patterns
+
+| PII Type | Regex Pattern |
+|----------|--------------|
+| Email | `[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}` |
+| Phone | `\(\d{3}\) \d{3}-\d{4}`, `\d{3}-\d{3}-\d{4}`, `\d{10}` |
+| SSN | `\d{3}-\d{2}-\d{4}` |
+| IP Address | `\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}` |
+
+### Secret Detection Patterns
+
+| Secret Type | Regex Pattern |
+|-------------|--------------|
+| Stripe API keys | `sk_live_[a-zA-Z0-9]+`, `pk_live_[a-zA-Z0-9]+` |
+| AWS Access Key | `AKIA[0-9A-Z]{16}` |
+| Bearer Token | `Bearer [a-zA-Z0-9._-]+` |
+| Password assignment | `password\s*=\s*["'][^"']+["']` |
+
+### Data Masking Patterns
+
+When PII must be logged, use masking:
+
+```typescript
+// Email: j***@example.com
+const maskEmail = (email: string) => email.charAt(0) + '***@' + email.split('@')[1];
+
+// Phone: ***-***-4567
+const maskPhone = (phone: string) => '***-***-' + phone.slice(-4);
+
+// IP: 192.168.1.xxx
+const maskIP = (ip: string) => ip.split('.').slice(0, 3).join('.') + '.xxx';
+```
+
 ## Purpose
 
 Run the full 8-item security checklist against the **entire codebase** (or a specified directory) to ensure compliance with security best practices. This is a comprehensive scan — it checks all files, not just changed ones.
@@ -327,99 +389,93 @@ try {
 
 ## Output Format
 
-### All Checks Passed
+Use the following canonical `===` delimited report structure:
 
-```
-🔒 Security Review: PASSED
+````
+===========================================
+SECURITY-AUDITOR: Security & Compliance Report
+===========================================
 
-Checked: src/features/auth/
+=== CRITICAL VIOLATIONS (BLOCKS MERGE) ===
+Count: 2
 
-✅ Input validation: Found zod schemas in all form handlers
-✅ No PII in logs: Clean (0 violations)
-✅ Secrets: No hardcoded secrets detected
-✅ HTTPS: All URLs use HTTPS (except localhost)
-✅ Security headers: Configured in middleware
-✅ Token storage: Using httpOnly cookies
-✅ Data encryption: HTTPS enforced, database encrypted
-✅ Error messages: Generic messages, detailed logging server-side
-
-All security requirements met. ✅
-
-Compliance: HIPAA ✓ GDPR ✓ PCI DSS ✓ PIPEDA ✓ CCPA ✓ SOC 2 ✓
-```
-
-### Violations Found
-
-```
-🔒 Security Review Results:
-
-Checked: src/features/auth/
-
-✅ Input validation: Found zod schemas in all form handlers
-
-❌ PII in logs: Found potential PII exposure
-   File: src/lib/logger.ts:42
-   Code: console.log('User email:', user.email);
-   Fix: Remove PII from logs or use sanitization
-   Reference: docs/compliance/logging-data-protection.md
-
-✅ Secrets: No hardcoded secrets detected
-
-⚠️  HTTPS: Found 1 http:// URL
-   File: src/config.ts:5
-   Code: const API_URL = 'http://localhost:3000';
-   Note: localhost is acceptable for development
-
-❌ Security headers: Not configured
-   Issue: Missing CSP, HSTS, X-Frame-Options
-   Fix: Add security headers to your middleware
-
-⚠️  Token storage: Using localStorage (XSS vulnerable)
-   File: src/lib/auth.ts:25
-   Code: localStorage.setItem('token', authToken);
-   Fix: Use httpOnly cookies instead
-   Severity: HIGH
-
-✅ Data encryption: HTTPS enforced
-
-❌ Error messages: Technical details exposed
-   File: src/api/users.ts:45
-   Code: res.status(500).json({ error: error.message });
-   Fix: Use generic error messages
+1. src/auth/login.ts:45
+   Violation: Email logged in error message
+   Code: console.error('Login failed for user:', email)
+   Standards: GDPR, HIPAA, CCPA
+   Impact: Personal data leakage in logs
+   Fix: Use user ID instead, mask email if logging required
    Example:
-     res.status(500).json({
-       error: 'An error occurred. Please try again.',
-       errorId: generateErrorId(),
-     });
+     ```typescript
+     // Bad
+     console.error('Login failed for user:', email);
 
----
+     // Good
+     console.error('Login failed', { userId: user.id });
+     ```
 
-Summary:
-- Passed: 4/8
-- Failed: 3/8 (Critical)
-- Warnings: 1/8
+2. src/config/api.ts:12
+   Violation: Hardcoded API key
+   Code: const API_KEY = "sk_live_abc123xyz"
+   Standards: SOC 2
+   Impact: Secret exposure in git history
+   Fix: Use environment variable
+   Example:
+     ```typescript
+     // Bad
+     const API_KEY = "sk_live_abc123xyz";
 
-Critical Issues:
-1. PII in logs (HIPAA, GDPR violation)
-2. Security headers missing (SOC 2 requirement)
-3. Error messages expose technical details
+     // Good
+     const API_KEY = process.env.STRIPE_API_KEY;
+     ```
 
-Compliance Impact:
-- ❌ HIPAA: Violation (PII in logs)
-- ❌ GDPR: Violation (PII in logs)
-- ⚠️  PCI DSS: Warning (token storage)
-- ⚠️  SOC 2: Warning (security headers)
+=== WARNINGS (NON-BLOCKING) ===
+Count: 3
 
-Recommendation:
-FIX CRITICAL ISSUES before merging:
-1. Remove PII from logs (/pii-scanner for detailed scan)
-2. Configure security headers in middleware
-3. Use generic error messages
+1. src/components/Form.tsx:78
+   Warning: Missing zod validation
+   Code: const handleSubmit = (data) => { ... }
+   Standards: Best practice
+   Impact: Potential XSS, SQL injection via unvalidated input
+   Suggestion: Add zod schema validation
 
-Reference Documentation:
-- Security Guidelines: docs/SECURITY_GUIDELINES.md
-- Compliance Docs: docs/compliance/
-```
+=== COMPLIANCE STATUS ===
+✓ HIPAA (Healthcare): PASS
+✗ GDPR (Europe): FAIL (email in logs)
+✓ PCI DSS (Payment): PASS
+✓ PIPEDA (Canada): PASS
+✓ CCPA (California): PASS
+✗ SOC 2 (Security): FAIL (hardcoded secret)
+
+=== PII DETECTED ===
+Locations where PII found (masked in logs):
+- src/auth/login.ts:45 - Email
+- src/components/Profile.tsx:23 - Phone number
+- src/utils/logger.ts:67 - IP address
+
+=== REQUIRED ACTIONS ===
+Before merge:
+1. Remove email from login error message (line 45)
+2. Move API key to environment variable (line 12)
+
+Recommended (not blocking):
+3. Add zod validation to Form component
+
+===========================================
+SUMMARY
+===========================================
+Critical: 2 (BLOCKS MERGE)
+Warnings: 3 (should fix)
+Compliance: 4/6 passing
+
+Status: ❌ CRITICAL ISSUES - CANNOT MERGE
+(or: Status: ✅ ALL CHECKS PASSED)
+
+Next Steps:
+1. Fix critical violations
+2. Run /security-review again
+3. Consider implementing warnings
+````
 
 ## Validation Rules
 
